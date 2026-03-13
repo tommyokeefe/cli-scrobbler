@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build macOS universal
+        run: |
+          GOOS=darwin GOARCH=arm64 go build \
+            -ldflags "-s -w \
+              -X 'cli-scrobbler/internal/config.BuildLastFMAPIKey=${{ secrets.LASTFM_API_KEY }}' \
+              -X 'cli-scrobbler/internal/config.BuildLastFMAPISecret=${{ secrets.LASTFM_API_SECRET }}'" \
+            -o scrobble-darwin-arm64 ./cmd/scrobble
+          GOOS=darwin GOARCH=amd64 go build \
+            -ldflags "-s -w \
+              -X 'cli-scrobbler/internal/config.BuildLastFMAPIKey=${{ secrets.LASTFM_API_KEY }}' \
+              -X 'cli-scrobbler/internal/config.BuildLastFMAPISecret=${{ secrets.LASTFM_API_SECRET }}'" \
+            -o scrobble-darwin-amd64 ./cmd/scrobble
+          lipo -create -output scrobble-macos scrobble-darwin-arm64 scrobble-darwin-amd64
+          rm scrobble-darwin-arm64 scrobble-darwin-amd64
+
+      - name: Build Linux
+        run: |
+          GOOS=linux GOARCH=amd64 go build \
+            -ldflags "-s -w \
+              -X 'cli-scrobbler/internal/config.BuildLastFMAPIKey=${{ secrets.LASTFM_API_KEY }}' \
+              -X 'cli-scrobbler/internal/config.BuildLastFMAPISecret=${{ secrets.LASTFM_API_SECRET }}'" \
+            -o scrobble-linux-amd64 ./cmd/scrobble
+          GOOS=linux GOARCH=arm64 go build \
+            -ldflags "-s -w \
+              -X 'cli-scrobbler/internal/config.BuildLastFMAPIKey=${{ secrets.LASTFM_API_KEY }}' \
+              -X 'cli-scrobbler/internal/config.BuildLastFMAPISecret=${{ secrets.LASTFM_API_SECRET }}'" \
+            -o scrobble-linux-arm64 ./cmd/scrobble
+
+      - name: Build Windows
+        run: |
+          GOOS=windows GOARCH=amd64 go build \
+            -ldflags "-s -w \
+              -X 'cli-scrobbler/internal/config.BuildLastFMAPIKey=${{ secrets.LASTFM_API_KEY }}' \
+              -X 'cli-scrobbler/internal/config.BuildLastFMAPISecret=${{ secrets.LASTFM_API_SECRET }}'" \
+            -o scrobble-windows-amd64.exe ./cmd/scrobble
+
+      - name: Upload to release
+        run: |
+          gh release upload ${{ github.ref_name }} \
+            scrobble-macos \
+            scrobble-linux-amd64 \
+            scrobble-linux-arm64 \
+            scrobble-windows-amd64.exe \
+            --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
