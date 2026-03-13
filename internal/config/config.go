@@ -20,6 +20,13 @@ const (
 	durationCacheFileName = "durations.json"
 )
 
+// BuildLastFMAPIKey and BuildLastFMAPISecret are injected at link time via:
+// -ldflags "-X 'cli-scrobbler/internal/config.BuildLastFMAPIKey=...' -X 'cli-scrobbler/internal/config.BuildLastFMAPISecret=...'"
+var (
+	BuildLastFMAPIKey    string
+	BuildLastFMAPISecret string
+)
+
 type Config struct {
 	DiscogsToken     string `json:"discogs_token,omitempty"`
 	DiscogsUsername  string `json:"discogs_username,omitempty"`
@@ -104,13 +111,26 @@ func Load() (Config, error) {
 		cfg.LastFMSessionKey = userCfg.LastFMSessionKey
 	}
 
+	// Apply build-time baked-in credentials as base defaults.
+	if BuildLastFMAPIKey != "" {
+		cfg.LastFMAPIKey = BuildLastFMAPIKey
+	}
+	if BuildLastFMAPISecret != "" {
+		cfg.LastFMAPISecret = BuildLastFMAPISecret
+	}
+
+	// Local repo-root config.json can override build-time defaults (dev workflow).
 	buildCfg, buildCfgExists, err := readConfig(paths.BuildConfigFile)
 	if err != nil {
 		return Config{}, fmt.Errorf("read build config: %w", err)
 	}
 	if buildCfgExists {
-		cfg.LastFMAPIKey = buildCfg.LastFMAPIKey
-		cfg.LastFMAPISecret = buildCfg.LastFMAPISecret
+		if buildCfg.LastFMAPIKey != "" {
+			cfg.LastFMAPIKey = buildCfg.LastFMAPIKey
+		}
+		if buildCfg.LastFMAPISecret != "" {
+			cfg.LastFMAPISecret = buildCfg.LastFMAPISecret
+		}
 	}
 
 	if cfg.DiscogsUserAgent == "" {

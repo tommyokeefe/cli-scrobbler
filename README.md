@@ -1,4 +1,4 @@
-# cli-scrobbler
+# Discogs CLI Scrobbler
 
 ## Configuration paths
 
@@ -19,9 +19,31 @@ Environment variables still override values from `config.json`:
 - `SCROBBLER_LASTFM_API_SECRET`
 - `SCROBBLER_LASTFM_SESSION_KEY`
 
-## Example config.json
+## Building
 
-Create `config.json` in the repository root with Last.fm app credentials:
+Last.fm app credentials are baked into the binary at link time. Build with:
+
+```bash
+go build \
+  -ldflags "-s -w \
+    -X 'cli-scrobbler/internal/config.BuildLastFMAPIKey=YOUR_KEY' \
+    -X 'cli-scrobbler/internal/config.BuildLastFMAPISecret=YOUR_SECRET'" \
+  -o scrobble ./cmd/scrobble
+```
+
+Or install directly to `~/go/bin/`:
+
+```bash
+go install \
+  -ldflags "-s -w \
+    -X 'cli-scrobbler/internal/config.BuildLastFMAPIKey=YOUR_KEY' \
+    -X 'cli-scrobbler/internal/config.BuildLastFMAPISecret=YOUR_SECRET'" \
+  ./cmd/scrobble
+```
+
+## Local development
+
+To avoid passing `-ldflags` every time during development, create a `config.json` in the repository root to override the baked-in credentials:
 
 ```json
 {
@@ -30,9 +52,4 @@ Create `config.json` in the repository root with Last.fm app credentials:
 }
 ```
 
-At minimum, Last.fm requires:
 
-- `lastfm_api_key`
-- `lastfm_api_secret`
-
-User-specific values (`discogs_token`, `discogs_username`, `discogs_user_agent`, `lastfm_session_key`) are collected from the user via the interactive CLI and saved in the user config directory.
