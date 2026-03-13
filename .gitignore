@@ -2,4 +2,4 @@
 config.json
 
 # built executable
-scrobble
+/scrobble
