@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +19,75 @@ import (
 	"cli-scrobbler/internal/model"
 	"cli-scrobbler/internal/scrobble"
 )
+
+const appTitle = "Discogs CLI Scrobbler"
+
+var appHeader = []string{
+	"░███████   ░██",
+	"░██   ░██",
+	"░██    ░██ ░██ ░███████   ░███████   ░███████   ░████████  ░███████",
+	"░██    ░██ ░██░██        ░██    ░██ ░██    ░██ ░██    ░██ ░██",
+	"░██    ░██ ░██ ░███████  ░██        ░██    ░██ ░██    ░██  ░███████",
+	"░██   ░██  ░██       ░██ ░██    ░██ ░██    ░██ ░██   ░███        ░██",
+	"░███████   ░██ ░███████   ░███████   ░███████   ░█████░██  ░███████",
+	"                                                      ░██",
+	"                                                ░███████",
+	"",
+	"  ░██████  ░██         ░██████",
+	" ░██   ░██ ░██           ░██",
+	"░██        ░██           ░██",
+	"░██        ░██           ░██",
+	"░██        ░██           ░██",
+	" ░██   ░██ ░██           ░██",
+	"  ░██████  ░██████████ ░██████",
+	"",
+	"",
+	"",
+	"  ░██████                                  ░██        ░██        ░██",
+	" ░██   ░██                                 ░██        ░██        ░██",
+	"░██          ░███████  ░██░████  ░███████  ░████████  ░████████  ░██  ░███████  ░██░████",
+	" ░████████  ░██    ░██ ░███     ░██    ░██ ░██    ░██ ░██    ░██ ░██ ░██    ░██ ░███",
+	"        ░██ ░██        ░██      ░██    ░██ ░██    ░██ ░██    ░██ ░██ ░█████████ ░██",
+	" ░██   ░██  ░██    ░██ ░██      ░██    ░██ ░███   ░██ ░███   ░██ ░██ ░██        ░██",
+	"  ░██████    ░███████  ░██       ░███████  ░██░█████  ░██░█████  ░██  ░███████  ░██",
+	"",
+	"",
+	"",
+	"",
+}
+
+func printHeader(out io.Writer) {
+	fmt.Fprintln(out)
+
+	if colorsEnabled() {
+		for i, line := range appHeader {
+			_ = i
+			fmt.Fprintf(out, "\x1b[1;38;5;205m%s\x1b[0m\n", line)
+		}
+		fmt.Fprintln(out)
+		fmt.Fprintf(out, "\x1b[1;38;5;205m%s\x1b[0m\n", appTitle)
+		fmt.Fprintln(out)
+		return
+	}
+
+	for _, line := range appHeader {
+		fmt.Fprintln(out, line)
+	}
+	fmt.Fprintln(out)
+}
+
+func colorsEnabled() bool {
+	if os.Getenv("NO_COLOR") != "" {
+		return false
+	}
+
+	term := strings.ToLower(strings.TrimSpace(os.Getenv("TERM")))
+	if term == "" || term == "dumb" {
+		return false
+	}
+
+	return true
+}
 
 func Run(args []string, in io.Reader, out, errOut io.Writer) error {
 	_ = errOut
@@ -385,8 +455,7 @@ func parseStartedAt(value string) (time.Time, error) {
 }
 
 func printUsage(out io.Writer) {
-	fmt.Fprintln(out, "cli-scrobbler")
-	fmt.Fprintln(out)
+	printHeader(out)
 	fmt.Fprintln(out, "Run with no arguments to start the interactive app.")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Commands:")
@@ -407,7 +476,8 @@ func printUsage(out io.Writer) {
 func runInteractive(in io.Reader, out io.Writer) error {
 	reader := bufio.NewReader(in)
 
-	fmt.Fprintln(out, "Welcome to cli-scrobbler.")
+	printHeader(out)
+	fmt.Fprintf(out, "Welcome to %s.\n", appTitle)
 	fmt.Fprintln(out, "This interactive mode will help you connect Discogs and Last.fm, then search and scrobble albums.")
 	fmt.Fprintln(out)
 
@@ -424,12 +494,11 @@ func runInteractive(in io.Reader, out io.Writer) error {
 	for {
 		fmt.Fprintln(out)
 		fmt.Fprintln(out, "What would you like to do?")
-		fmt.Fprintln(out, "1. Search my Discogs collection")
-		fmt.Fprintln(out, "2. Scrobble an album")
-		fmt.Fprintln(out, "3. Update Discogs / Last.fm connection settings")
-		fmt.Fprintln(out, "4. Exit")
+		fmt.Fprintln(out, "1. Search and scrobble an album")
+		fmt.Fprintln(out, "2. Update Discogs / Last.fm connection settings")
+		fmt.Fprintln(out, "3. Exit")
 
-		selection, err := promptIndex(reader, out, 4)
+		selection, err := promptIndex(reader, out, 3)
 		if err != nil {
 			return err
 		}
@@ -440,16 +509,11 @@ func runInteractive(in io.Reader, out io.Writer) error {
 				return err
 			}
 		case 1:
-			cfg, err = interactiveScrobble(reader, out, cfg)
-			if err != nil {
-				return err
-			}
-		case 2:
 			cfg, err = runConnectionWizard(reader, out, cfg, true)
 			if err != nil {
 				return err
 			}
-		case 3:
+		case 2:
 			fmt.Fprintln(out, "Goodbye.")
 			return nil
 		}
@@ -588,28 +652,21 @@ func interactiveSearch(reader *bufio.Reader, out io.Writer, cfg config.Config) e
 		return err
 	}
 
-	results, err := searchCollection(context.Background(), cfg, query)
+	release, err := resolveRelease(context.Background(), cfg, query, reader, out)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "no albums in your Discogs collection matched") {
+			fmt.Fprintln(out, "No matching albums found in your Discogs collection.")
+			return nil
+		}
+		return err
+	}
+
+	startedAt, err := promptStartedAt(reader, out)
 	if err != nil {
 		return err
 	}
-	if len(results) == 0 {
-		fmt.Fprintln(out, "No matching albums found in your Discogs collection.")
-		return nil
-	}
 
-	fmt.Fprintln(out)
-	for i, result := range results {
-		fmt.Fprintf(out, "%d. %s - %s", i+1, result.Artist, result.Title)
-		if result.Year != 0 {
-			fmt.Fprintf(out, " (%d)", result.Year)
-		}
-		if len(result.Formats) > 0 {
-			fmt.Fprintf(out, " - %s", strings.Join(result.Formats, ", "))
-		}
-		fmt.Fprintf(out, " [release_id=%d]\n", result.ReleaseID)
-	}
-
-	return nil
+	return scrobbleRelease(context.Background(), cfg, release, startedAt, reader, out)
 }
 
 func interactiveScrobble(reader *bufio.Reader, out io.Writer, cfg config.Config) (config.Config, error) {
