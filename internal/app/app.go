@@ -64,9 +64,6 @@ func printHeader(out io.Writer) {
 			_ = i
 			fmt.Fprintf(out, "\x1b[1;38;5;205m%s\x1b[0m\n", line)
 		}
-		fmt.Fprintln(out)
-		fmt.Fprintf(out, "\x1b[1;38;5;205m%s\x1b[0m\n", appTitle)
-		fmt.Fprintln(out)
 		return
 	}
 
@@ -456,8 +453,7 @@ func runInteractive(in io.Reader, out io.Writer) error {
 	reader := bufio.NewReader(in)
 
 	printHeader(out)
-	fmt.Fprintf(out, "Welcome to %s.\n", appTitle)
-	fmt.Fprintln(out, "This interactive mode will help you connect Discogs and Last.fm, then search and scrobble albums.")
+	fmt.Fprintln(out, "✨Scrobble albums from your Discogs collection to Last.fm, right from the command line!✨")
 	fmt.Fprintln(out)
 
 	cfg, err := config.Load()
@@ -473,9 +469,9 @@ func runInteractive(in io.Reader, out io.Writer) error {
 	for {
 		fmt.Fprintln(out)
 		fmt.Fprintln(out, "What would you like to do?")
-		fmt.Fprintln(out, "1. Search and scrobble an album")
-		fmt.Fprintln(out, "2. Update Discogs / Last.fm connection settings")
-		fmt.Fprintln(out, "3. Exit")
+		fmt.Fprintln(out, "1. 🔎 Search and scrobble an album")
+		fmt.Fprintln(out, "2. 🔐 Update Discogs / Last.fm connection settings")
+		fmt.Fprintln(out, "3. 👋 Exit")
 
 		selection, err := promptIndex(reader, out, 3)
 		if err != nil {
@@ -501,7 +497,7 @@ func runInteractive(in io.Reader, out io.Writer) error {
 
 func ensureConnections(reader *bufio.Reader, out io.Writer, cfg config.Config) (config.Config, error) {
 	if !cfg.MissingDiscogs() && !cfg.MissingLastFM() {
-		fmt.Fprintln(out, "Discogs and Last.fm are already configured.")
+		fmt.Fprintln(out, "✅ Discogs and Last.fm are configured.")
 		return cfg, nil
 	}
 
