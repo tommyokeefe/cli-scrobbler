@@ -30,23 +30,55 @@ type Config struct {
 }
 
 type Paths struct {
-	Dir           string
-	ConfigFile    string
-	DurationCache string
+	Dir             string
+	ConfigFile      string
+	BuildConfigFile string
+	DurationCache   string
 }
 
 func ResolvePaths() (Paths, error) {
+	repoRoot, err := resolveRepoRoot()
+	if err != nil {
+		return Paths{}, err
+	}
+
 	baseDir, err := os.UserConfigDir()
 	if err != nil {
 		return Paths{}, fmt.Errorf("resolve user config dir: %w", err)
 	}
 
-	dir := filepath.Join(baseDir, AppName)
+	userDir := filepath.Join(baseDir, AppName)
+
 	return Paths{
-		Dir:           dir,
-		ConfigFile:    filepath.Join(dir, configFileName),
-		DurationCache: filepath.Join(dir, durationCacheFileName),
+		Dir:             userDir,
+		ConfigFile:      filepath.Join(userDir, configFileName),
+		BuildConfigFile: filepath.Join(repoRoot, configFileName),
+		DurationCache:   filepath.Join(userDir, durationCacheFileName),
 	}, nil
+}
+
+func resolveRepoRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("resolve working directory: %w", err)
+	}
+
+	start := dir
+	for {
+		goModPath := filepath.Join(dir, "go.mod")
+		if _, err := os.Stat(goModPath); err == nil {
+			return dir, nil
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+
+		dir = parent
+	}
+
+	return "", fmt.Errorf("resolve repository root: go.mod not found from working directory %q", start)
 }
 
 func Load() (Config, error) {
@@ -59,17 +91,26 @@ func Load() (Config, error) {
 		DiscogsUserAgent: defaultDiscogsAgent,
 	}
 
-	data, err := os.ReadFile(paths.ConfigFile)
+	userCfg, userCfgExists, err := readConfig(paths.ConfigFile)
 	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return Config{}, fmt.Errorf("read config: %w", err)
+		return Config{}, fmt.Errorf("read user config: %w", err)
+	}
+	if userCfgExists {
+		cfg.DiscogsToken = userCfg.DiscogsToken
+		cfg.DiscogsUsername = userCfg.DiscogsUsername
+		if userCfg.DiscogsUserAgent != "" {
+			cfg.DiscogsUserAgent = userCfg.DiscogsUserAgent
 		}
-		cfg.applyEnv()
-		return cfg, nil
+		cfg.LastFMSessionKey = userCfg.LastFMSessionKey
 	}
 
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return Config{}, fmt.Errorf("parse config: %w", err)
+	buildCfg, buildCfgExists, err := readConfig(paths.BuildConfigFile)
+	if err != nil {
+		return Config{}, fmt.Errorf("read build config: %w", err)
+	}
+	if buildCfgExists {
+		cfg.LastFMAPIKey = buildCfg.LastFMAPIKey
+		cfg.LastFMAPISecret = buildCfg.LastFMAPISecret
 	}
 
 	if cfg.DiscogsUserAgent == "" {
@@ -94,7 +135,14 @@ func Save(cfg Config) error {
 		cfg.DiscogsUserAgent = defaultDiscogsAgent
 	}
 
-	data, err := json.MarshalIndent(cfg, "", "  ")
+	userCfg := Config{
+		DiscogsToken:     cfg.DiscogsToken,
+		DiscogsUsername:  cfg.DiscogsUsername,
+		DiscogsUserAgent: cfg.DiscogsUserAgent,
+		LastFMSessionKey: cfg.LastFMSessionKey,
+	}
+
+	data, err := json.MarshalIndent(userCfg, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal config: %w", err)
 	}
@@ -104,6 +152,23 @@ func Save(cfg Config) error {
 	}
 
 	return nil
+}
+
+func readConfig(path string) (Config, bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return Config{}, false, nil
+		}
+		return Config{}, false, err
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return Config{}, false, fmt.Errorf("parse config at %s: %w", path, err)
+	}
+
+	return cfg, true, nil
 }
 
 func (c Config) MissingDiscogs() bool {
