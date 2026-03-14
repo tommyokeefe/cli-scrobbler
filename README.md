@@ -41,6 +41,37 @@ go install \
   ./cmd/scrobble
 ```
 
+## Releases
+
+GitHub releases are built and published by GoReleaser via `.github/workflows/release.yml`.
+
+On every published GitHub release, CI builds and uploads:
+
+- macOS: amd64, arm64
+- Linux: amd64, arm64
+- Windows: amd64
+
+Release binaries are packaged as archives (`.tar.gz` for macOS/Linux, `.zip` for Windows) plus `checksums.txt`.
+
+Required repository secrets:
+
+- `LASTFM_API_KEY`
+- `LASTFM_API_SECRET`
+
+To publish package-manager installers, also create:
+
+- `TAP_GITHUB_TOKEN` (a Personal Access Token with write access to the tap/bucket repos)
+
+And create these repositories under your GitHub account:
+
+- `tommyokeefe/homebrew-tap`
+- `tommyokeefe/scoop-bucket`
+
+Then users can install with:
+
+- Homebrew: `brew tap tommyokeefe/tap && brew install scrobble`
+- Scoop: `scoop bucket add tommyokeefe https://github.com/tommyokeefe/scoop-bucket && scoop install scrobble`
+
 ## Local development
 
 To avoid passing `-ldflags` every time during development, create a `config.json` in the repository root to override the baked-in credentials:

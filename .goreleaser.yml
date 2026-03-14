@@ -1,0 +1,72 @@
+version: 2
+
+project_name: scrobble
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: scrobble
+    main: ./cmd/scrobble
+    binary: scrobble
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X cli-scrobbler/internal/config.BuildLastFMAPIKey={{ .Env.LASTFM_API_KEY }} -X cli-scrobbler/internal/config.BuildLastFMAPISecret={{ .Env.LASTFM_API_SECRET }}
+
+archives:
+  - id: default
+    ids:
+      - scrobble
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: checksums.txt
+
+brews:
+  - name: scrobble
+    homepage: https://github.com/tommyokeefe/cli-scrobbler
+    description: Scrobble albums from Discogs to Last.fm from the command line.
+    repository:
+      owner: tommyokeefe
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: github-actions[bot]
+      email: 41898282+github-actions[bot]@users.noreply.github.com
+    directory: Formula
+    install: |
+      bin.install "scrobble"
+    test: |
+      system "#{bin}/scrobble", "--help"
+
+scoops:
+  - name: scrobble
+    homepage: https://github.com/tommyokeefe/cli-scrobbler
+    description: Scrobble albums from Discogs to Last.fm from the command line.
+    repository:
+      owner: tommyokeefe
+      name: scoop-bucket
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: github-actions[bot]
+      email: 41898282+github-actions[bot]@users.noreply.github.com
+
+release:
+  draft: false
+  prerelease: auto
