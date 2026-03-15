@@ -55,8 +55,8 @@ scrobble scrobble --started-at "2026-03-13 20:15" <album query>
 
 The app uses separate build-time and user-time configuration:
 
-- Build config (`config.json`) is loaded from the repository root (directory containing `go.mod`).
-  - Intended for Last.fm app credentials (`lastfm_api_key`, `lastfm_api_secret`) during build/development.
+- Build config (`config.json`) is loaded from the repository root when you run the app from inside the working tree.
+  - Intended as an optional development override for Last.fm app credentials (`lastfm_api_key`, `lastfm_api_secret`).
 - User config (`config.json`) is loaded from the user config directory under `cli-scrobbler`.
   - Stores user-entered values from the interactive CLI (Discogs settings and Last.fm session key).
 - `durations.json` is loaded from the user config directory under `cli-scrobbler`.
@@ -123,5 +123,4 @@ To avoid passing `-ldflags` every build during development, create a repo-root `
 ## License
 
 This project is licensed under the MIT License. You can use, modify, fork, and redistribute it, including commercially, as long as the copyright and license notice are preserved.
-
 

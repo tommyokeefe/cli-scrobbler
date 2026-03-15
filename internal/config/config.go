@@ -44,7 +44,7 @@ type Paths struct {
 }
 
 func ResolvePaths() (Paths, error) {
-	repoRoot, err := resolveRepoRoot()
+	repoRoot, hasRepoRoot, err := resolveRepoRoot()
 	if err != nil {
 		return Paths{}, err
 	}
@@ -55,26 +55,29 @@ func ResolvePaths() (Paths, error) {
 	}
 
 	userDir := filepath.Join(baseDir, AppName)
+	buildConfigFile := ""
+	if hasRepoRoot {
+		buildConfigFile = filepath.Join(repoRoot, configFileName)
+	}
 
 	return Paths{
 		Dir:             userDir,
 		ConfigFile:      filepath.Join(userDir, configFileName),
-		BuildConfigFile: filepath.Join(repoRoot, configFileName),
+		BuildConfigFile: buildConfigFile,
 		DurationCache:   filepath.Join(userDir, durationCacheFileName),
 	}, nil
 }
 
-func resolveRepoRoot() (string, error) {
+func resolveRepoRoot() (string, bool, error) {
 	dir, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("resolve working directory: %w", err)
+		return "", false, fmt.Errorf("resolve working directory: %w", err)
 	}
 
-	start := dir
 	for {
 		goModPath := filepath.Join(dir, "go.mod")
 		if _, err := os.Stat(goModPath); err == nil {
-			return dir, nil
+			return dir, true, nil
 		}
 
 		parent := filepath.Dir(dir)
@@ -85,7 +88,7 @@ func resolveRepoRoot() (string, error) {
 		dir = parent
 	}
 
-	return "", fmt.Errorf("resolve repository root: go.mod not found from working directory %q", start)
+	return "", false, nil
 }
 
 func Load() (Config, error) {
@@ -120,16 +123,18 @@ func Load() (Config, error) {
 	}
 
 	// Local repo-root config.json can override build-time defaults (dev workflow).
-	buildCfg, buildCfgExists, err := readConfig(paths.BuildConfigFile)
-	if err != nil {
-		return Config{}, fmt.Errorf("read build config: %w", err)
-	}
-	if buildCfgExists {
-		if buildCfg.LastFMAPIKey != "" {
-			cfg.LastFMAPIKey = buildCfg.LastFMAPIKey
+	if paths.BuildConfigFile != "" {
+		buildCfg, buildCfgExists, err := readConfig(paths.BuildConfigFile)
+		if err != nil {
+			return Config{}, fmt.Errorf("read build config: %w", err)
 		}
-		if buildCfg.LastFMAPISecret != "" {
-			cfg.LastFMAPISecret = buildCfg.LastFMAPISecret
+		if buildCfgExists {
+			if buildCfg.LastFMAPIKey != "" {
+				cfg.LastFMAPIKey = buildCfg.LastFMAPIKey
+			}
+			if buildCfg.LastFMAPISecret != "" {
+				cfg.LastFMAPISecret = buildCfg.LastFMAPISecret
+			}
 		}
 	}
 

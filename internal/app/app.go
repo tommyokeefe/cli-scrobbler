@@ -150,7 +150,7 @@ func runAuth(args []string, in io.Reader, out io.Writer) error {
 		}
 
 		if cfg.MissingLastFMAppCredentials() {
-			return fmt.Errorf("missing Last.fm app credentials; set SCROBBLER_LASTFM_API_KEY / SCROBBLER_LASTFM_API_SECRET or add lastfm_api_key / lastfm_api_secret in repository-root config.json")
+			return fmt.Errorf("missing Last.fm app credentials; set SCROBBLER_LASTFM_API_KEY / SCROBBLER_LASTFM_API_SECRET or add lastfm_api_key / lastfm_api_secret in a repo-root config.json during development")
 		}
 
 		if strings.TrimSpace(*sessionKey) != "" {
@@ -190,7 +190,7 @@ func runSearch(args []string, in io.Reader, out io.Writer) error {
 	}
 
 	if cfg.MissingLastFMAppCredentials() {
-		return fmt.Errorf("missing Last.fm app credentials; set SCROBBLER_LASTFM_API_KEY / SCROBBLER_LASTFM_API_SECRET or add lastfm_api_key / lastfm_api_secret in repository-root config.json")
+		return fmt.Errorf("missing Last.fm app credentials; set SCROBBLER_LASTFM_API_KEY / SCROBBLER_LASTFM_API_SECRET or add lastfm_api_key / lastfm_api_secret in a repo-root config.json during development")
 	}
 	if cfg.MissingLastFMSession() {
 		return fmt.Errorf("missing Last.fm session; run `auth lastfm` to complete the browser auth flow or set SCROBBLER_LASTFM_SESSION_KEY")
@@ -244,7 +244,7 @@ func runScrobble(args []string, in io.Reader, out io.Writer) error {
 		return fmt.Errorf("missing Discogs token; run `auth discogs --token <token>` or set %s", "SCROBBLER_DISCOGS_TOKEN")
 	}
 	if cfg.MissingLastFMAppCredentials() {
-		return fmt.Errorf("missing Last.fm app credentials; set SCROBBLER_LASTFM_API_KEY / SCROBBLER_LASTFM_API_SECRET or add lastfm_api_key / lastfm_api_secret in repository-root config.json")
+		return fmt.Errorf("missing Last.fm app credentials; set SCROBBLER_LASTFM_API_KEY / SCROBBLER_LASTFM_API_SECRET or add lastfm_api_key / lastfm_api_secret in a repo-root config.json during development")
 	}
 	if cfg.MissingLastFMSession() {
 		return fmt.Errorf("missing Last.fm session; run `auth lastfm` to complete the browser auth flow or set SCROBBLER_LASTFM_SESSION_KEY")
@@ -528,7 +528,7 @@ func runConnectionWizard(reader *bufio.Reader, out io.Writer, cfg config.Config,
 
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Last.fm setup")
-	fmt.Fprintln(out, "Set Last.fm app credentials via environment variables or repository-root config.json, then connect the current user's Last.fm account.")
+	fmt.Fprintln(out, "Set Last.fm app credentials via environment variables or a repo-root config.json during development, then connect the current user's Last.fm account.")
 
 	if allowSkip && !cfg.MissingLastFM() {
 		updateLastFM, err := promptYesNo(reader, out, "Update Last.fm settings?", false)
@@ -579,7 +579,7 @@ func promptDiscogsConfig(reader *bufio.Reader, out io.Writer, cfg *config.Config
 
 func promptLastFMConfig(reader *bufio.Reader, out io.Writer, cfg *config.Config) error {
 	if cfg.MissingLastFMAppCredentials() {
-		return fmt.Errorf("missing Last.fm app credentials; set SCROBBLER_LASTFM_API_KEY / SCROBBLER_LASTFM_API_SECRET or add lastfm_api_key / lastfm_api_secret in repository-root config.json")
+		return fmt.Errorf("missing Last.fm app credentials; set SCROBBLER_LASTFM_API_KEY / SCROBBLER_LASTFM_API_SECRET or add lastfm_api_key / lastfm_api_secret in a repo-root config.json during development")
 	}
 
 	sessionKey, err := promptLastFMSessionKey(reader, out, cfg.LastFMAPIKey, cfg.LastFMAPISecret, cfg.LastFMSessionKey)
