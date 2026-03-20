@@ -39,6 +39,19 @@ func TestRunSearchRequiresQuery(t *testing.T) {
 	}
 }
 
+func TestRunSearchNoScrobbleFlagParsed(t *testing.T) {
+	t.Parallel()
+
+	// --no-scrobble should be accepted; the error should be "search query is required", not a flag error.
+	err := runSearch([]string{"--no-scrobble"}, strings.NewReader("\n"), &bytes.Buffer{})
+	if err == nil {
+		t.Fatal("runSearch() error = nil, want error")
+	}
+	if err.Error() != "search query is required" {
+		t.Fatalf("runSearch() error = %q, want %q", err.Error(), "search query is required")
+	}
+}
+
 func TestFormatTrackDuration(t *testing.T) {
 	t.Parallel()
 
