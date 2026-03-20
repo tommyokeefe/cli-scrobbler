@@ -1,5 +1,6 @@
 # Local secrets/config
 config.json
+copilot-instructions.md
 
 # built executable
 /scrobble
