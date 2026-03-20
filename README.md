@@ -3,7 +3,7 @@
 [![CI](https://github.com/tommyokeefe/cli-scrobbler/actions/workflows/ci.yml/badge.svg)](https://github.com/tommyokeefe/cli-scrobbler/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/tommyokeefe/cli-scrobbler/branch/main/graph/badge.svg)](https://codecov.io/gh/tommyokeefe/cli-scrobbler)
 [![GitHub release](https://img.shields.io/github/v/release/tommyokeefe/cli-scrobbler)](https://github.com/tommyokeefe/cli-scrobbler/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tommyokeefe/cli-scrobbler)](https://goreportcard.com/report/github.com/tommyokeefe/cli-scrobbler)
 
 Scrobble albums from your Discogs collection to Last.fm from the command line.
@@ -130,4 +130,4 @@ To avoid passing `-ldflags` every build during development, create a repo-root `
 
 ## License
 
-This project is licensed under the MIT License. You can use, modify, fork, and redistribute it, including commercially, as long as the copyright and license notice are preserved.
+This project is licensed under the GNU General Public License v3.0. You can use, modify, and redistribute it, but if you distribute modified versions you must make the corresponding source available under the same license terms.
