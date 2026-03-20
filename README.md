@@ -1,7 +1,7 @@
 # Discogs CLI Scrobbler
 
 [![CI](https://github.com/tommyokeefe/cli-scrobbler/actions/workflows/ci.yml/badge.svg)](https://github.com/tommyokeefe/cli-scrobbler/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/tommyokeefe/cli-scrobbler/branch/main/graph/badge.svg)](https://codecov.io/gh/tommyokeefe/cli-scrobbler)
+[![codecov](https://codecov.io/gh/tommyokeefe/cli-scrobbler/branch/main/graph/badge.svg?token=46THHHZGCO)](https://codecov.io/gh/tommyokeefe/cli-scrobbler)
 [![GitHub release](https://img.shields.io/github/v/release/tommyokeefe/cli-scrobbler)](https://github.com/tommyokeefe/cli-scrobbler/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tommyokeefe/cli-scrobbler)](https://goreportcard.com/report/github.com/tommyokeefe/cli-scrobbler)
