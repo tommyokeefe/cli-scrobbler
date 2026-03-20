@@ -14,8 +14,7 @@ import (
 )
 
 func TestRunAuthDiscogsSavesConfig(t *testing.T) {
-	tempHome := t.TempDir()
-	t.Setenv("HOME", tempHome)
+	isolateAppConfigHome(t)
 	restore := chdirForAppTest(t, t.TempDir())
 	defer restore()
 
@@ -38,8 +37,7 @@ func TestRunAuthDiscogsSavesConfig(t *testing.T) {
 }
 
 func TestRunAuthLastFMSavesProvidedSessionKey(t *testing.T) {
-	tempHome := t.TempDir()
-	t.Setenv("HOME", tempHome)
+	isolateAppConfigHome(t)
 	t.Setenv("SCROBBLER_LASTFM_API_KEY", "api-key")
 	t.Setenv("SCROBBLER_LASTFM_API_SECRET", "api-secret")
 	restore := chdirForAppTest(t, t.TempDir())
@@ -64,8 +62,7 @@ func TestRunAuthLastFMSavesProvidedSessionKey(t *testing.T) {
 }
 
 func TestRunAuthLastFMRequiresCredentials(t *testing.T) {
-	tempHome := t.TempDir()
-	t.Setenv("HOME", tempHome)
+	isolateAppConfigHome(t)
 	restore := chdirForAppTest(t, t.TempDir())
 	defer restore()
 
@@ -79,8 +76,7 @@ func TestRunAuthLastFMRequiresCredentials(t *testing.T) {
 }
 
 func TestRunSearchDryRunUsesDiscogsResults(t *testing.T) {
-	tempHome := t.TempDir()
-	t.Setenv("HOME", tempHome)
+	isolateAppConfigHome(t)
 	restore := chdirForAppTest(t, t.TempDir())
 	defer restore()
 	writeUserConfig(t, "{\n  \"discogs_token\": \"discogs-token\",\n  \"discogs_username\": \"discogs-user\",\n  \"discogs_user_agent\": \"agent/1.0\"\n}\n")
@@ -131,8 +127,7 @@ func TestRunSearchDryRunUsesDiscogsResults(t *testing.T) {
 }
 
 func TestRunSearchNoMatchesPrintsFriendlyMessage(t *testing.T) {
-	tempHome := t.TempDir()
-	t.Setenv("HOME", tempHome)
+	isolateAppConfigHome(t)
 	restore := chdirForAppTest(t, t.TempDir())
 	defer restore()
 	writeUserConfig(t, "{\n  \"discogs_token\": \"discogs-token\",\n  \"discogs_username\": \"discogs-user\",\n  \"discogs_user_agent\": \"agent/1.0\"\n}\n")
@@ -161,8 +156,7 @@ func TestRunSearchNoMatchesPrintsFriendlyMessage(t *testing.T) {
 }
 
 func TestRunScrobbleSendsTracksToLastFM(t *testing.T) {
-	tempHome := t.TempDir()
-	t.Setenv("HOME", tempHome)
+	isolateAppConfigHome(t)
 	t.Setenv("SCROBBLER_LASTFM_API_KEY", "api-key")
 	t.Setenv("SCROBBLER_LASTFM_API_SECRET", "api-secret")
 	t.Setenv("SCROBBLER_LASTFM_SESSION_KEY", "session-key")

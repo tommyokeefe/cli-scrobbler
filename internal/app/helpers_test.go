@@ -237,8 +237,7 @@ func TestResolveDiscogsUsernameWrapsIdentityError(t *testing.T) {
 }
 
 func TestScrobbleReleaseDryRunSavesPromptedDurations(t *testing.T) {
-	tempHome := t.TempDir()
-	t.Setenv("HOME", tempHome)
+	isolateAppConfigHome(t)
 	restore := chdirForAppTest(t, t.TempDir())
 	defer restore()
 
@@ -314,4 +313,12 @@ func writeUserConfig(t *testing.T, cfg string) {
 	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(cfg), 0o600); err != nil {
 		t.Fatalf("WriteFile(config.json) error = %v", err)
 	}
+}
+
+func isolateAppConfigHome(t *testing.T) {
+	t.Helper()
+
+	tempHome := t.TempDir()
+	t.Setenv("HOME", tempHome)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tempHome, ".config"))
 }
