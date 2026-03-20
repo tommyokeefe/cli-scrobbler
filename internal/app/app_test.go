@@ -52,6 +52,114 @@ func TestRunSearchNoScrobbleFlagParsed(t *testing.T) {
 	}
 }
 
+func TestRunDispatchValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		args            []string
+		wantErr         string
+		wantOutContains string
+	}{
+		{
+			name:            "help command",
+			args:            []string{"help"},
+			wantOutContains: "Commands:",
+		},
+		{
+			name:    "unknown command",
+			args:    []string{"unknown"},
+			wantErr: "unknown command \"unknown\"",
+		},
+		{
+			name:    "auth without target",
+			args:    []string{"auth"},
+			wantErr: "expected auth target: discogs or lastfm",
+		},
+		{
+			name:    "search without query",
+			args:    []string{"search"},
+			wantErr: "search query is required",
+		},
+		{
+			name:    "search accepts no-scrobble flag",
+			args:    []string{"search", "--no-scrobble"},
+			wantErr: "search query is required",
+		},
+		{
+			name:    "scrobble without query",
+			args:    []string{"scrobble"},
+			wantErr: "album query is required",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+
+			err := Run(tc.args, strings.NewReader("\n"), &out, &out)
+
+			if tc.wantErr != "" {
+				if err == nil {
+					t.Fatalf("Run(%v) error = nil, want %q", tc.args, tc.wantErr)
+				}
+				if err.Error() != tc.wantErr {
+					t.Fatalf("Run(%v) error = %q, want %q", tc.args, err.Error(), tc.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Run(%v) error = %v, want nil", tc.args, err)
+			}
+
+			if tc.wantOutContains != "" && !strings.Contains(out.String(), tc.wantOutContains) {
+				t.Fatalf("Run(%v) output missing %q, got:\n%s", tc.args, tc.wantOutContains, out.String())
+			}
+		})
+	}
+}
+
+func TestRunScrobbleValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{
+			name:    "missing album query",
+			args:    nil,
+			wantErr: "album query is required",
+		},
+		{
+			name:    "missing started-at",
+			args:    []string{"Disintegration"},
+			wantErr: "--started-at is required",
+		},
+		{
+			name:    "invalid started-at",
+			args:    []string{"--started-at", "not-a-time", "Disintegration"},
+			wantErr: "unsupported --started-at value \"not-a-time\"",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			err := runScrobble(tc.args, strings.NewReader("\n"), &bytes.Buffer{})
+			if err == nil {
+				t.Fatalf("runScrobble(%v) error = nil, want %q", tc.args, tc.wantErr)
+			}
+			if err.Error() != tc.wantErr {
+				t.Fatalf("runScrobble(%v) error = %q, want %q", tc.args, err.Error(), tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestFormatTrackDuration(t *testing.T) {
 	t.Parallel()
 
