@@ -11,7 +11,6 @@ import (
 	"cli-scrobbler/internal/cache"
 	"cli-scrobbler/internal/config"
 	"cli-scrobbler/internal/discogs"
-	"cli-scrobbler/internal/lastfm"
 	"cli-scrobbler/internal/model"
 	"cli-scrobbler/internal/scrobble"
 )
@@ -42,7 +41,7 @@ func scrobbleRelease(ctx context.Context, cfg config.Config, release model.Album
 		return err
 	}
 
-	client := lastfm.NewClient(cfg.LastFMAPIKey, cfg.LastFMAPISecret, cfg.LastFMSessionKey)
+	client := newLastFMClient(cfg.LastFMAPIKey, cfg.LastFMAPISecret, cfg.LastFMSessionKey)
 	if !noScrobble {
 		if err := client.Scrobble(ctx, timeline, release.Title); err != nil {
 			return err
@@ -57,7 +56,7 @@ func scrobbleRelease(ctx context.Context, cfg config.Config, release model.Album
 }
 
 func resolveRelease(ctx context.Context, cfg config.Config, query string, reader *bufio.Reader, out io.Writer) (model.Album, error) {
-	client := discogs.NewClient(cfg.DiscogsToken, cfg.DiscogsUserAgent)
+	client := newDiscogsClient(cfg.DiscogsToken, cfg.DiscogsUserAgent)
 	results, err := searchCollection(ctx, cfg, query)
 	if err != nil {
 		return model.Album{}, err
@@ -123,7 +122,7 @@ func hydrateDurations(release model.Album, store *cache.DurationStore, reader *b
 }
 
 func searchCollection(ctx context.Context, cfg config.Config, query string) ([]discogs.CollectionRelease, error) {
-	client := discogs.NewClient(cfg.DiscogsToken, cfg.DiscogsUserAgent)
+	client := newDiscogsClient(cfg.DiscogsToken, cfg.DiscogsUserAgent)
 	username, err := resolveDiscogsUsername(ctx, client, cfg)
 	if err != nil {
 		return nil, err

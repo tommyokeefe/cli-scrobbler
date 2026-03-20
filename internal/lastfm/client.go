@@ -47,8 +47,16 @@ type sessionPayload struct {
 }
 
 func NewClient(apiKey, apiSecret, sessionKey string) *Client {
+	return NewClientWithHTTPClient(apiKey, apiSecret, sessionKey, &http.Client{Timeout: 20 * time.Second})
+}
+
+func NewClientWithHTTPClient(apiKey, apiSecret, sessionKey string, httpClient *http.Client) *Client {
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 20 * time.Second}
+	}
+
 	return &Client{
-		httpClient: &http.Client{Timeout: 20 * time.Second},
+		httpClient: httpClient,
 		apiKey:     apiKey,
 		apiSecret:  apiSecret,
 		sessionKey: sessionKey,

@@ -86,8 +86,16 @@ type formatResponse struct {
 }
 
 func NewClient(token, userAgent string) *Client {
+	return NewClientWithHTTPClient(token, userAgent, &http.Client{Timeout: 15 * time.Second})
+}
+
+func NewClientWithHTTPClient(token, userAgent string, httpClient *http.Client) *Client {
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 15 * time.Second}
+	}
+
 	return &Client{
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+		httpClient: httpClient,
 		token:      token,
 		userAgent:  userAgent,
 	}
