@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"cli-scrobbler/internal/discogs"
-	"cli-scrobbler/internal/lastfm"
 	"cli-scrobbler/internal/model"
 )
 
@@ -182,7 +181,7 @@ func promptLastFMSessionKey(reader *bufio.Reader, out io.Writer, apiKey, apiSecr
 }
 
 func guideLastFMSessionKey(reader *bufio.Reader, out io.Writer, apiKey, apiSecret string) (string, error) {
-	client := lastfm.NewClient(apiKey, apiSecret, "")
+	client := newLastFMClient(apiKey, apiSecret, "")
 	token, err := client.GetAuthToken(context.Background())
 	if err != nil {
 		return "", err

@@ -136,3 +136,129 @@ func TestScrobbleRequiresTracks(t *testing.T) {
 		t.Fatalf("Scrobble() error = %q, want %q", err.Error(), "no tracks to scrobble")
 	}
 }
+
+func TestGetAuthTokenSuccess(t *testing.T) {
+	t.Parallel()
+
+	client := NewClient("api-key", "api-secret", "")
+	client.httpClient = &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if req.Method != http.MethodPost {
+				t.Fatalf("request method = %q, want %q", req.Method, http.MethodPost)
+			}
+			body, err := io.ReadAll(req.Body)
+			if err != nil {
+				t.Fatalf("ReadAll(request body) error = %v", err)
+			}
+			values, err := url.ParseQuery(string(body))
+			if err != nil {
+				t.Fatalf("ParseQuery() error = %v", err)
+			}
+			if values.Get("method") != "auth.getToken" {
+				t.Fatalf("method = %q, want %q", values.Get("method"), "auth.getToken")
+			}
+			if values.Get("api_key") != "api-key" {
+				t.Fatalf("api_key = %q, want %q", values.Get("api_key"), "api-key")
+			}
+			if values.Get("api_sig") == "" {
+				t.Fatal("api_sig should not be empty")
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"token":"token-123"}`)),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+
+	got, err := client.GetAuthToken(context.Background())
+	if err != nil {
+		t.Fatalf("GetAuthToken() error = %v", err)
+	}
+	if got != "token-123" {
+		t.Fatalf("GetAuthToken() = %q, want %q", got, "token-123")
+	}
+}
+
+func TestGetAuthTokenAPIError(t *testing.T) {
+	t.Parallel()
+
+	client := NewClient("api-key", "api-secret", "")
+	client.httpClient = &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"error":4,"message":"Authentication failed"}`)),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+
+	_, err := client.GetAuthToken(context.Background())
+	if err == nil {
+		t.Fatal("GetAuthToken() error = nil, want error")
+	}
+	if err.Error() != "Last.fm API error 4: Authentication failed" {
+		t.Fatalf("GetAuthToken() error = %q, want API error", err.Error())
+	}
+}
+
+func TestGetSessionKeySuccess(t *testing.T) {
+	t.Parallel()
+
+	client := NewClient("api-key", "api-secret", "")
+	client.httpClient = &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			body, err := io.ReadAll(req.Body)
+			if err != nil {
+				t.Fatalf("ReadAll(request body) error = %v", err)
+			}
+			values, err := url.ParseQuery(string(body))
+			if err != nil {
+				t.Fatalf("ParseQuery() error = %v", err)
+			}
+			if values.Get("method") != "auth.getSession" {
+				t.Fatalf("method = %q, want %q", values.Get("method"), "auth.getSession")
+			}
+			if values.Get("token") != "token-123" {
+				t.Fatalf("token = %q, want %q", values.Get("token"), "token-123")
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"session":{"key":"session-123"}}`)),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+
+	got, err := client.GetSessionKey(context.Background(), "token-123")
+	if err != nil {
+		t.Fatalf("GetSessionKey() error = %v", err)
+	}
+	if got != "session-123" {
+		t.Fatalf("GetSessionKey() = %q, want %q", got, "session-123")
+	}
+}
+
+func TestGetSessionKeyRequiresResponseKey(t *testing.T) {
+	t.Parallel()
+
+	client := NewClient("api-key", "api-secret", "")
+	client.httpClient = &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"session":{"key":"   "}}`)),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+
+	_, err := client.GetSessionKey(context.Background(), "token-123")
+	if err == nil {
+		t.Fatal("GetSessionKey() error = nil, want error")
+	}
+	if err.Error() != "Last.fm session response did not include a session key" {
+		t.Fatalf("GetSessionKey() error = %q, want missing key error", err.Error())
+	}
+}
