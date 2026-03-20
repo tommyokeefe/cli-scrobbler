@@ -42,6 +42,7 @@ brews:
   - name: scrobble
     homepage: https://github.com/tommyokeefe/cli-scrobbler
     description: Scrobble albums from Discogs to Last.fm from the command line.
+    license: GPL-3.0
     repository:
       owner: tommyokeefe
       name: homebrew-tap
@@ -59,6 +60,7 @@ scoops:
   - name: scrobble
     homepage: https://github.com/tommyokeefe/cli-scrobbler
     description: Scrobble albums from Discogs to Last.fm from the command line.
+    license: GPL-3.0
     repository:
       owner: tommyokeefe
       name: scoop-bucket
