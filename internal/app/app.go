@@ -291,7 +291,7 @@ func scrobbleRelease(ctx context.Context, cfg config.Config, release model.Album
 		return err
 	}
 
-	fmt.Fprintf(out, "Scrobbled %d tracks from %s - %s starting at %s.\n", len(timeline), release.Artist, release.Title, startedAt.Format(time.RFC3339))
+	printTimeline(out, release, timeline)
 	return nil
 }
 
@@ -305,28 +305,80 @@ func resolveRelease(ctx context.Context, cfg config.Config, query string, reader
 		return model.Album{}, fmt.Errorf("no albums in your Discogs collection matched %q", query)
 	}
 
-	if len(results) == 1 {
-		return client.GetRelease(ctx, results[0].ReleaseID)
+	releaseID := results[0].ReleaseID
+	if len(results) > 1 {
+		fmt.Fprintln(out, "Select an album from your Discogs collection:")
+		for i, result := range results {
+			fmt.Fprintf(out, "%d. %s - %s", i+1, result.Artist, result.Title)
+			if result.Year != 0 {
+				fmt.Fprintf(out, " (%d)", result.Year)
+			}
+			if len(result.Formats) > 0 {
+				fmt.Fprintf(out, " - %s", strings.Join(result.Formats, ", "))
+			}
+			fmt.Fprintf(out, " [release_id=%d]\n", result.ReleaseID)
+		}
+
+		selection, err := promptIndex(reader, out, len(results))
+		if err != nil {
+			return model.Album{}, err
+		}
+		releaseID = results[selection].ReleaseID
 	}
 
-	fmt.Fprintln(out, "Select an album from your Discogs collection:")
-	for i, result := range results {
-		fmt.Fprintf(out, "%d. %s - %s", i+1, result.Artist, result.Title)
-		if result.Year != 0 {
-			fmt.Fprintf(out, " (%d)", result.Year)
-		}
-		if len(result.Formats) > 0 {
-			fmt.Fprintf(out, " - %s", strings.Join(result.Formats, ", "))
-		}
-		fmt.Fprintf(out, " [release_id=%d]\n", result.ReleaseID)
-	}
-
-	selection, err := promptIndex(reader, out, len(results))
+	album, err := client.GetRelease(ctx, releaseID)
 	if err != nil {
 		return model.Album{}, err
 	}
 
-	return client.GetRelease(ctx, results[selection].ReleaseID)
+	printAlbumDetails(out, album)
+	return album, nil
+}
+
+func printAlbumDetails(out io.Writer, album model.Album) {
+	fmt.Fprintln(out)
+	if album.Year != 0 {
+		fmt.Fprintf(out, "%s - %s (%d)\n", album.Artist, album.Title, album.Year)
+	} else {
+		fmt.Fprintf(out, "%s - %s\n", album.Artist, album.Title)
+	}
+	for _, track := range album.Tracks {
+		fmt.Fprintf(out, "  %-4s  %-40s  %5s\n", track.Position, track.Title, formatTrackDuration(track.Duration))
+	}
+	fmt.Fprintln(out)
+}
+
+func printTimeline(out io.Writer, release model.Album, timeline []scrobble.ScheduledTrack) {
+	fmt.Fprintln(out)
+	if release.Year != 0 {
+		fmt.Fprintf(out, "Scrobbled %s - %s (%d)\n", release.Artist, release.Title, release.Year)
+	} else {
+		fmt.Fprintf(out, "Scrobbled %s - %s\n", release.Artist, release.Title)
+	}
+	for _, st := range timeline {
+		fmt.Fprintf(out, "  %-4s  %-40s  %5s  %s\n",
+			st.Track.Position,
+			st.Track.Title,
+			formatTrackDuration(st.Track.Duration),
+			st.StartedAt.Local().Format("3:04 PM"),
+		)
+	}
+	fmt.Fprintln(out)
+}
+
+func formatTrackDuration(d time.Duration) string {
+	if d <= 0 {
+		return "--:--"
+	}
+	totalSec := int(d.Seconds())
+	min := totalSec / 60
+	sec := totalSec % 60
+	if min >= 60 {
+		h := min / 60
+		min = min % 60
+		return fmt.Sprintf("%d:%02d:%02d", h, min, sec)
+	}
+	return fmt.Sprintf("%d:%02d", min, sec)
 }
 
 func hydrateDurations(release model.Album, store *cache.DurationStore, reader *bufio.Reader, out io.Writer) (model.Album, bool, error) {
