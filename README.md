@@ -8,8 +8,6 @@
 
 Scrobble albums from your Discogs collection to Last.fm from the command line.
 
-To publish coverage on GitHub, enable the Codecov GitHub app for this repository, add the repository upload token as a GitHub Actions secret named `CODECOV_TOKEN`, and rerun CI on `main` so the badge can pick up the first successful upload.
-
 The app helps you:
 
 - connect Discogs + Last.fm from an interactive CLI
