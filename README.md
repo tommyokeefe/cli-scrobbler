@@ -1,6 +1,14 @@
 # Discogs CLI Scrobbler
 
+[![CI](https://github.com/tommyokeefe/cli-scrobbler/actions/workflows/ci.yml/badge.svg)](https://github.com/tommyokeefe/cli-scrobbler/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/tommyokeefe/cli-scrobbler/branch/main/graph/badge.svg)](https://codecov.io/gh/tommyokeefe/cli-scrobbler)
+[![GitHub release](https://img.shields.io/github/v/release/tommyokeefe/cli-scrobbler)](https://github.com/tommyokeefe/cli-scrobbler/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tommyokeefe/cli-scrobbler)](https://goreportcard.com/report/github.com/tommyokeefe/cli-scrobbler)
+
 Scrobble albums from your Discogs collection to Last.fm from the command line.
+
+To publish coverage on GitHub, enable the Codecov app for this repository so the coverage upload step in CI can report status and render the badge.
 
 The app helps you:
 
