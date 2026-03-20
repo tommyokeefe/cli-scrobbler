@@ -7,14 +7,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
-	"cli-scrobbler/internal/cache"
 	"cli-scrobbler/internal/config"
-	"cli-scrobbler/internal/discogs"
-	"cli-scrobbler/internal/lastfm"
-	"cli-scrobbler/internal/model"
-	"cli-scrobbler/internal/scrobble"
 )
 
 const appTitle = "Discogs CLI Scrobbler"
@@ -247,112 +241,6 @@ func runScrobble(args []string, in io.Reader, out io.Writer) error {
 	return scrobbleRelease(context.Background(), cfg, release, startedAt, reader, out, *noScrobble)
 }
 
-func scrobbleRelease(ctx context.Context, cfg config.Config, release model.Album, startedAt time.Time, reader *bufio.Reader, out io.Writer, noScrobble bool) error {
-	paths, err := config.ResolvePaths()
-	if err != nil {
-		return err
-	}
-
-	store, err := cache.Load(paths.DurationCache)
-	if err != nil {
-		return err
-	}
-
-	release, askedForDurations, err := hydrateDurations(release, store, reader, out)
-	if err != nil {
-		return err
-	}
-	if askedForDurations {
-		if err := store.Save(); err != nil {
-			return err
-		}
-	}
-
-	timeline, err := scrobble.BuildTimeline(release, startedAt)
-	if err != nil {
-		return err
-	}
-
-	client := lastfm.NewClient(cfg.LastFMAPIKey, cfg.LastFMAPISecret, cfg.LastFMSessionKey)
-	if !noScrobble {
-		if err := client.Scrobble(ctx, timeline, release.Title); err != nil {
-			return err
-		}
-	}
-
-	printTimeline(out, release, timeline)
-	if noScrobble {
-		fmt.Fprintln(out, "Dry run — tracks not sent to Last.fm.")
-	}
-	return nil
-}
-
-func resolveRelease(ctx context.Context, cfg config.Config, query string, reader *bufio.Reader, out io.Writer) (model.Album, error) {
-	client := discogs.NewClient(cfg.DiscogsToken, cfg.DiscogsUserAgent)
-	results, err := searchCollection(ctx, cfg, query)
-	if err != nil {
-		return model.Album{}, err
-	}
-	if len(results) == 0 {
-		return model.Album{}, fmt.Errorf("no albums in your Discogs collection matched %q", query)
-	}
-
-	releaseID := results[0].ReleaseID
-	if len(results) > 1 {
-		fmt.Fprintln(out, "Select an album from your Discogs collection:")
-		for i, result := range results {
-			fmt.Fprintf(out, "%d. %s - %s", i+1, result.Artist, result.Title)
-			if result.Year != 0 {
-				fmt.Fprintf(out, " (%d)", result.Year)
-			}
-			if len(result.Formats) > 0 {
-				fmt.Fprintf(out, " - %s", strings.Join(result.Formats, ", "))
-			}
-			fmt.Fprintf(out, " [release_id=%d]\n", result.ReleaseID)
-		}
-
-		selection, err := promptIndex(reader, out, len(results))
-		if err != nil {
-			return model.Album{}, err
-		}
-		releaseID = results[selection].ReleaseID
-	}
-
-	album, err := client.GetRelease(ctx, releaseID)
-	if err != nil {
-		return model.Album{}, err
-	}
-
-	printAlbumDetails(out, album)
-	return album, nil
-}
-
-func hydrateDurations(release model.Album, store *cache.DurationStore, reader *bufio.Reader, out io.Writer) (model.Album, bool, error) {
-	asked := false
-
-	for i, track := range release.Tracks {
-		if track.Duration > 0 {
-			continue
-		}
-
-		if cached, ok := store.Lookup(release.ReleaseID, track); ok {
-			release.Tracks[i].Duration = cached
-			continue
-		}
-
-		duration, err := promptDuration(reader, out, track)
-		if err != nil {
-			return model.Album{}, false, err
-		}
-
-		release.Tracks[i].Duration = duration
-		store.Put(release.ReleaseID, release.Tracks[i], duration)
-		asked = true
-	}
-
-	return release, asked, nil
-}
-
 func printUsage(out io.Writer) {
 	printHeader(out)
 	fmt.Fprintln(out, "Run with no arguments to start the interactive app.")
@@ -418,101 +306,6 @@ func runInteractive(in io.Reader, out io.Writer, noScrobble bool) error {
 	}
 }
 
-func ensureConnections(reader *bufio.Reader, out io.Writer, cfg config.Config) (config.Config, error) {
-	if !cfg.MissingDiscogs() && !cfg.MissingLastFM() {
-		fmt.Fprintln(out, "✅ Discogs and Last.fm are configured.")
-		return cfg, nil
-	}
-
-	fmt.Fprintln(out, "Let's connect your accounts.")
-	return runConnectionWizard(reader, out, cfg, false)
-}
-
-func runConnectionWizard(reader *bufio.Reader, out io.Writer, cfg config.Config, allowSkip bool) (config.Config, error) {
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Discogs setup")
-	fmt.Fprintln(out, "Provide a Discogs personal access token. You can also save your username if identity lookup is unavailable.")
-
-	if allowSkip && !cfg.MissingDiscogs() {
-		updateDiscogs, err := promptYesNo(reader, out, "Update Discogs settings?", false)
-		if err != nil {
-			return cfg, err
-		}
-		if updateDiscogs {
-			if err := promptDiscogsConfig(reader, out, &cfg); err != nil {
-				return cfg, err
-			}
-		}
-	} else {
-		if err := promptDiscogsConfig(reader, out, &cfg); err != nil {
-			return cfg, err
-		}
-	}
-
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Last.fm setup")
-	fmt.Fprintln(out, "Set Last.fm app credentials via environment variables or a repo-root config.json during development, then connect the current user's Last.fm account.")
-
-	if allowSkip && !cfg.MissingLastFM() {
-		updateLastFM, err := promptYesNo(reader, out, "Update Last.fm settings?", false)
-		if err != nil {
-			return cfg, err
-		}
-		if updateLastFM {
-			if err := promptLastFMConfig(reader, out, &cfg); err != nil {
-				return cfg, err
-			}
-		}
-	} else {
-		if err := promptLastFMConfig(reader, out, &cfg); err != nil {
-			return cfg, err
-		}
-	}
-
-	if err := config.Save(cfg); err != nil {
-		return cfg, err
-	}
-
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Saved connection settings.")
-	return cfg, nil
-}
-
-func promptDiscogsConfig(reader *bufio.Reader, out io.Writer, cfg *config.Config) error {
-	token, err := promptSecretValue(reader, out, "Discogs personal access token", cfg.DiscogsToken)
-	if err != nil {
-		return err
-	}
-
-	username, err := promptOptionalValue(reader, out, "Discogs username (optional; leave blank to auto-detect)", cfg.DiscogsUsername)
-	if err != nil {
-		return err
-	}
-
-	userAgent, err := promptRequiredValue(reader, out, "Discogs User-Agent", cfg.DiscogsUserAgent)
-	if err != nil {
-		return err
-	}
-
-	cfg.DiscogsToken = token
-	cfg.DiscogsUsername = username
-	cfg.DiscogsUserAgent = userAgent
-	return nil
-}
-
-func promptLastFMConfig(reader *bufio.Reader, out io.Writer, cfg *config.Config) error {
-	if cfg.MissingLastFMAppCredentials() {
-		return fmt.Errorf("missing Last.fm app credentials; set SCROBBLER_LASTFM_API_KEY / SCROBBLER_LASTFM_API_SECRET or add lastfm_api_key / lastfm_api_secret in a repo-root config.json during development")
-	}
-
-	sessionKey, err := promptLastFMSessionKey(reader, out, cfg.LastFMAPIKey, cfg.LastFMAPISecret, cfg.LastFMSessionKey)
-	if err != nil {
-		return err
-	}
-	cfg.LastFMSessionKey = sessionKey
-	return nil
-}
-
 func interactiveSearch(reader *bufio.Reader, out io.Writer, cfg config.Config, noScrobble bool) error {
 	query, err := promptRequiredValue(reader, out, "Search your collection for", "")
 	if err != nil {
@@ -563,32 +356,4 @@ func interactiveScrobble(reader *bufio.Reader, out io.Writer, cfg config.Config,
 		return cfg, err
 	}
 	return cfg, nil
-}
-
-func searchCollection(ctx context.Context, cfg config.Config, query string) ([]discogs.CollectionRelease, error) {
-	client := discogs.NewClient(cfg.DiscogsToken, cfg.DiscogsUserAgent)
-	username, err := resolveDiscogsUsername(ctx, client, cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	releases, err := client.CollectionReleases(ctx, username)
-	if err != nil {
-		return nil, err
-	}
-
-	return discogs.SearchCollection(query, releases), nil
-}
-
-func resolveDiscogsUsername(ctx context.Context, client *discogs.Client, cfg config.Config) (string, error) {
-	if username := strings.TrimSpace(cfg.DiscogsUsername); username != "" {
-		return username, nil
-	}
-
-	username, err := client.Identity(ctx)
-	if err != nil {
-		return "", fmt.Errorf("resolve Discogs username: %w (or configure it with `auth discogs --token <token> --username <name>` / SCROBBLER_DISCOGS_USERNAME)", err)
-	}
-
-	return username, nil
 }
