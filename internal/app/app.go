@@ -89,22 +89,30 @@ func colorsEnabled() bool {
 func Run(args []string, in io.Reader, out, errOut io.Writer) error {
 	_ = errOut
 
-	if len(args) == 0 {
-		return runInteractive(in, out)
+	fs := flag.NewFlagSet("scrobble", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	noScrobble := fs.Bool("no-scrobble", false, "Dry run: skip sending scrobbles to Last.fm")
+	if err := fs.Parse(args); err != nil {
+		return err
 	}
 
-	switch args[0] {
+	remaining := fs.Args()
+	if len(remaining) == 0 {
+		return runInteractive(in, out, *noScrobble)
+	}
+
+	switch remaining[0] {
 	case "auth":
-		return runAuth(args[1:], in, out)
+		return runAuth(remaining[1:], in, out)
 	case "search":
-		return runSearch(args[1:], in, out)
+		return runSearch(remaining[1:], in, out)
 	case "scrobble":
-		return runScrobble(args[1:], in, out)
+		return runScrobble(remaining[1:], in, out)
 	case "help", "-h", "--help":
 		printUsage(out)
 		return nil
 	default:
-		return fmt.Errorf("unknown command %q", args[0])
+		return fmt.Errorf("unknown command %q", remaining[0])
 	}
 }
 
@@ -503,6 +511,7 @@ func parseStartedAt(value string) (time.Time, error) {
 func printUsage(out io.Writer) {
 	printHeader(out)
 	fmt.Fprintln(out, "Run with no arguments to start the interactive app.")
+	fmt.Fprintln(out, "Pass --no-scrobble before any command for a dry run (tracks not sent to Last.fm).")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Commands:")
 	fmt.Fprintln(out, "  auth discogs --token <token> [--username <name>] [--user-agent <ua>]")
@@ -518,7 +527,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "  SCROBBLER_LASTFM_SESSION_KEY")
 }
 
-func runInteractive(in io.Reader, out io.Writer) error {
+func runInteractive(in io.Reader, out io.Writer, noScrobble bool) error {
 	reader := bufio.NewReader(in)
 
 	printHeader(out)
@@ -549,7 +558,7 @@ func runInteractive(in io.Reader, out io.Writer) error {
 
 		switch selection {
 		case 0:
-			if err := interactiveSearch(reader, out, cfg); err != nil {
+			if err := interactiveSearch(reader, out, cfg, noScrobble); err != nil {
 				return err
 			}
 		case 1:
@@ -659,7 +668,7 @@ func promptLastFMConfig(reader *bufio.Reader, out io.Writer, cfg *config.Config)
 	return nil
 }
 
-func interactiveSearch(reader *bufio.Reader, out io.Writer, cfg config.Config) error {
+func interactiveSearch(reader *bufio.Reader, out io.Writer, cfg config.Config, noScrobble bool) error {
 	query, err := promptRequiredValue(reader, out, "Search your collection for", "")
 	if err != nil {
 		return err
@@ -679,10 +688,10 @@ func interactiveSearch(reader *bufio.Reader, out io.Writer, cfg config.Config) e
 		return err
 	}
 
-	return scrobbleRelease(context.Background(), cfg, release, startedAt, reader, out, false)
+	return scrobbleRelease(context.Background(), cfg, release, startedAt, reader, out, noScrobble)
 }
 
-func interactiveScrobble(reader *bufio.Reader, out io.Writer, cfg config.Config) (config.Config, error) {
+func interactiveScrobble(reader *bufio.Reader, out io.Writer, cfg config.Config, noScrobble bool) (config.Config, error) {
 	if cfg.MissingDiscogs() || cfg.MissingLastFM() {
 		var err error
 		cfg, err = ensureConnections(reader, out, cfg)
@@ -705,7 +714,7 @@ func interactiveScrobble(reader *bufio.Reader, out io.Writer, cfg config.Config)
 	if err != nil {
 		return cfg, err
 	}
-	if err := scrobbleRelease(context.Background(), cfg, release, startedAt, reader, out, false); err != nil {
+	if err := scrobbleRelease(context.Background(), cfg, release, startedAt, reader, out, noScrobble); err != nil {
 		return cfg, err
 	}
 	return cfg, nil
