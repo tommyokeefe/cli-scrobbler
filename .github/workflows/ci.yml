@@ -35,8 +35,10 @@ jobs:
           path: coverage.out
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: codecov/codecov-action@v5
         with:
           files: ./coverage.out
-          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
           verbose: true

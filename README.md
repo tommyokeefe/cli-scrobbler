@@ -8,7 +8,7 @@
 
 Scrobble albums from your Discogs collection to Last.fm from the command line.
 
-To publish coverage on GitHub, enable the Codecov app for this repository so the coverage upload step in CI can report status and render the badge.
+To publish coverage on GitHub, enable the Codecov GitHub app for this repository, add the repository upload token as a GitHub Actions secret named `CODECOV_TOKEN`, and rerun CI on `main` so the badge can pick up the first successful upload.
 
 The app helps you:
 
@@ -131,4 +131,3 @@ To avoid passing `-ldflags` every build during development, create a repo-root `
 ## License
 
 This project is licensed under the MIT License. You can use, modify, fork, and redistribute it, including commercially, as long as the copyright and license notice are preserved.
-
